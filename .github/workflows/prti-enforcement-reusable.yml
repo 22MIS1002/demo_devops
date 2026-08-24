@@ -55,6 +55,11 @@ jobs:
     steps:
       - name: Validate PRTI data & Review attachment, update sticky comment, set commit status
         uses: actions/github-script@v7
+        env:
+          TARGET_OWNER: ${{ inputs.target_owner }}
+          TARGET_REPO: ${{ inputs.target_repo }}
+          COMMENT_BODY: ${{ inputs.comment_body }}
+          SENDER_LOGIN: ${{ inputs.comment_sender_login }}
         with:
           github-token: ${{ secrets.PRTI_CROSS_REPO_TOKEN }}
           script: |
@@ -62,15 +67,14 @@ jobs:
             const INVALIDATED_FLAG = '<!-- prti-invalidated -->';
             const STATUS_CONTEXT = 'PRTI Check';
 
-            const owner       = '${{ inputs.target_owner }}';
-            const repo        = '${{ inputs.target_repo }}';
+            const owner       = process.env.TARGET_OWNER;
+            const repo        = process.env.TARGET_REPO;
             const prNumber    = ${{ inputs.pr_number }};
-            // const headSha     = '${{ inputs.head_sha }}';
             const eventName   = '${{ inputs.event_name }}';
             const eventAction = '${{ inputs.event_action }}';
             const commentId   = ${{ inputs.comment_id }};
-            const commentBody = `${{ inputs.comment_body }}`;
-            const senderLogin = '${{ inputs.comment_sender_login }}';
+            const commentBody = process.env.COMMENT_BODY || '';
+            const senderLogin = process.env.SENDER_LOGIN || '';
 
             // Loop guard: skip only when the BOT edits/creates its OWN sticky comment.
             // A 'deleted' event must still run so the sticky comment can be recreated.
