@@ -6,10 +6,6 @@ on:
         description: "Pull Request number"
         required: true
         type: number
-      # head_sha:
-      #   description: "Head SHA of the PR"
-      #   required: true
-      #   type: string
       target_owner:
         description: "Owner of the repo being enforced"
         required: true
@@ -55,6 +51,10 @@ jobs:
     steps:
       - name: Validate PRTI data & Review attachment, update sticky comment, set commit status
         uses: actions/github-script@v7
+        env:
+          # ✅ FIX: Pass comment_body as env var to avoid JS syntax errors
+          # from special characters (backticks, quotes, newlines, ${...}) in comment text
+          COMMENT_BODY: ${{ inputs.comment_body }}
         with:
           github-token: ${{ secrets.PRTI_CROSS_REPO_TOKEN }}
           script: |
@@ -68,8 +68,11 @@ jobs:
             const eventName   = '${{ inputs.event_name }}';
             const eventAction = '${{ inputs.event_action }}';
             const commentId   = ${{ inputs.comment_id }};
-            const commentBody = `${{ inputs.comment_body }}`;
             const senderLogin = '${{ inputs.comment_sender_login }}';
+
+            // ✅ FIX: Read comment body safely from env var instead of injecting
+            // it directly into JS source (prevents SyntaxError on special chars)
+            const commentBody = process.env.COMMENT_BODY || '';
 
             // Loop guard: skip only when the BOT edits/creates its OWN sticky comment.
             // A 'deleted' event must still run so the sticky comment can be recreated.
@@ -89,11 +92,9 @@ jobs:
             });
 
             // Always derive headSha from live PR data.
-            // The input cannot carry the head SHA on issue_comment events
-            // since that event payload does not include it.
             const headSha = pr.head.sha;
 
-            // Scope: enforce only on PRs targeting 'develop' or any 'release/**' branch.
+            // Scope: enforce only on PRs targeting 'main'.
             // Re-checked here because issue_comment events are NOT branch-filterable by YAML.
             const baseRef = pr.base.ref;
             if (baseRef !== 'main') {
@@ -208,8 +209,6 @@ jobs:
 
             const textSources = [...activeComments.reverse()];
 
-            // Scans all active non-bot comments (most recent first) and returns
-            // the latest value matching the regex - from any commenter, not just the PR author.
             function getLatestValue(regex) {
               for (const text of textSources) {
                 const match = text.match(regex);
@@ -251,11 +250,6 @@ jobs:
                 if (/^-/.test(rawValue)) {
                   level1Errors.push(`${c.label} (Cannot be negative: "${rawValue}")`);
                 } else {
-                  // Accepted formats (case-insensitive):
-                  //   2h | 2hours | 2hour
-                  //   30m | 30min | 30mins | 30minutes | 30minute
-                  //   45  (bare number, treated as minutes)
-                  //   1h 30m | 1hour 30minutes | 2h 15mins  (combined)
                   const timeRegex = /^\d+\s*(hours?|h)\s*(\d+\s*(minutes?|mins?|m))?$|^\d+\s*(minutes?|mins?|m)$|^\d+$/i;
                   if (!timeRegex.test(rawValue)) {
                     level1Errors.push(
