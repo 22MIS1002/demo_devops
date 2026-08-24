@@ -377,13 +377,6 @@ jobs:
                 '> Previous PRTI data and review attachments have been marked as invalidated below. Please submit updated PRTI details and review `.md` file for this revision.',
                 ''
               ];
-            } else if (eventName === 'issue_comment' && !allValid) {
-              bannerLines = [
-                '> [!WARNING]',
-                '> **Notice on your recent comment/edit/deletion:**',
-                '> Validation rules were re-evaluated. Some checks failed.',
-                ''
-              ];
             }
 
             let statusLines = [];
