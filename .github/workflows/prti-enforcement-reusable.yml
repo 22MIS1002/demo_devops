@@ -52,11 +52,13 @@ jobs:
   prti-enforcement:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      PRTI_TOKEN: ${{ secrets.PRTI_CROSS_REPO_TOKEN }}
     steps:
       - name: Validate PRTI data & Review attachment, update sticky comment, set commit status
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.PRTI_CROSS_REPO_TOKEN }}
+          github-token: ${{ env.PRTI_TOKEN }}
           script: |
             const MARKER = '<!-- prti-reminder-sticky -->';
             const INVALIDATED_FLAG = '<!-- prti-invalidated -->';
