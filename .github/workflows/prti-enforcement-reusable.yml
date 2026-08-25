@@ -37,6 +37,11 @@ on:
         required: false
         type: string
         default: ""
+      comment_sender_type:
+        description: "Type of the comment author (Bot or User)"
+        required: false
+        type: string
+        default: ""
     secrets:
       PRTI_CROSS_REPO_TOKEN:
         required: true
@@ -69,6 +74,7 @@ jobs:
             const eventAction = '${{ inputs.event_action }}';
             const commentId   = ${{ inputs.comment_id }};
             const senderLogin = '${{ inputs.comment_sender_login }}';
+            const senderType  = '${{ inputs.comment_sender_type }}';
 
             // ✅ FIX: Read comment body safely from env var instead of injecting
             // it directly into JS source (prevents SyntaxError on special chars)
@@ -77,7 +83,7 @@ jobs:
             // Loop guard: skip only when the BOT edits/creates its OWN sticky comment.
             // A 'deleted' event must still run so the sticky comment can be recreated.
             if (eventName === 'issue_comment' && commentId !== 0) {
-              const isBotSender = senderLogin === 'github-actions[bot]';
+              const isBotSender = senderType === 'Bot' || senderLogin.endsWith('[bot]');
               const isStickyComment = commentBody.includes(MARKER);
               const isInvalidationEdit = commentBody.includes(INVALIDATED_FLAG);
 
