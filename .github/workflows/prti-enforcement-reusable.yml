@@ -144,7 +144,12 @@ jobs:
             const isSynchronize = eventName === 'pull_request' && eventAction === 'synchronize';
             const prtiRegex = /PR\s*Time|PR\s*Defects|TI\s*Time/i;
             const reviewRegex = /\[([^\]]+\.md)\]\((https?:\/\/[^\s)]+)\)/i;
+            // also catch renamed labels on real GitHub attachments
+            const attachmentMdRegex = /\[[^\]]+\]\((https?:\/\/github\.com\/user-attachments\/[^\s)]+\.md)\)/i;
 
+            const isReviewComment = (body) =>
+              reviewRegex.test(body || '') || attachmentMdRegex.test(body || '');
+              
             // 1. Label older PRTI/review comments as INVALIDATED on new commits
             if (isSynchronize) {
               core.info('New commit(s) pushed. Marking previous PRTI comments as invalidated...');
@@ -152,13 +157,13 @@ jobs:
                 c.user &&
                 !(c.body || '').includes(MARKER) &&
                 !(c.body || '').includes(INVALIDATED_FLAG) &&
-                (prtiRegex.test(c.body || '') || reviewRegex.test(c.body || ''))
+                (prtiRegex.test(c.body || '') || isReviewComment(c.body || ''))
               );
 
               for (const comment of prtiCommentsToInvalidate) {
                 const body = comment.body || '';
                 const hasPrti = prtiRegex.test(body);
-                const hasReview = reviewRegex.test(body);
+                const hasReview = isReviewComment(body);
 
                 let commentTypeLabel;
                 if (hasPrti && hasReview) {
