@@ -128,7 +128,7 @@ jobs:
                 comment =>
                   comment.user.login === 'github-actions[bot]' &&
                   comment.body &&
-                  comment.body.includes(MARKER)Expand commentComment on lines R129 to R133Resolved
+                  comment.body.includes(MARKER)
               ) || null;
             }
 
