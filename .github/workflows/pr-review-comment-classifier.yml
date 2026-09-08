@@ -62,15 +62,16 @@ jobs:
               return;
             }
 
-            // ── 3. Normalize Markdown saved-reply bold labels ─────────────────
-            //      **[LABEL]**  →  [LABEL]
-            const normalized = rawBody.replace(/\*\*\[([^\]]+)\]\*\*/g, '[$1]');
-            const withoutCodeBlocks = normalized.replace(/```[\s\S]*?```/g, '');
+            // ── 3. Keep only non-code text (do NOT normalize label formatting) ─────────
+            // We still ignore labels inside code blocks/inline code.
+            const withoutCodeBlocks = rawBody.replace(/```[\s\S]*?```/g, '');
             const cleanBody = withoutCodeBlocks.replace(/`[^`]*`/g, '');
 
-            // ── 4. Extract labels ─────────────────────────────────────────────
-            const TYPES           = ['QUESTION', 'DEFECT'];
-            const RANKINGS        = ['MAJOR', 'MINOR'];
+            // ── 4. Extract labels in STRICT saved-reply format ─────────────────────────
+            // Accept ONLY tokens written exactly as: **[LABEL]**
+            // Case-sensitive + bold required.
+            const TYPES = ['QUESTION', 'DEFECT'];
+            const RANKINGS = ['MAJOR', 'MINOR'];
             const CLASSIFICATIONS = [
               'MISSING',
               'EXTRA/SUPERFLUOUS',
@@ -84,24 +85,25 @@ jobs:
               'EDITORIAL',
             ];
 
-            const tokenRe = /\[([^\]]+)\]/g;
+            const strictTokenRe = /\*\*\[([^\]]+)\]\*\*/g;
             const tokens = [];
             let m;
-            while ((m = tokenRe.exec(cleanBody)) !== null) {
-              tokens.push(m[1].trim().toUpperCase());
+            while ((m = strictTokenRe.exec(cleanBody)) !== null) {
+              // Keep exact case/spacing as typed by user
+              tokens.push(m[1].trim());
             }
 
             const hasLabel = (label) => tokens.includes(label);
 
-            const typeLabels           = TYPES.filter(hasLabel);
-            const rankingLabels        = RANKINGS.filter(hasLabel);
+            const typeLabels = TYPES.filter(hasLabel);
+            const rankingLabels = RANKINGS.filter(hasLabel);
             const classificationLabels = CLASSIFICATIONS.filter(hasLabel);
 
-            const typeLabel           = typeLabels.length === 1 ? typeLabels[0] : null;
-            const rankingLabel        = rankingLabels.length === 1 ? rankingLabels[0] : null;
+            const typeLabel = typeLabels.length === 1 ? typeLabels[0] : null;
+            const rankingLabel = rankingLabels.length === 1 ? rankingLabels[0] : null;
             const classificationLabel = classificationLabels.length === 1 ? classificationLabels[0] : null;
 
-            core.info(`Tokens found: ${JSON.stringify(tokens)}`);
+            core.info(`Strict tokens found: ${JSON.stringify(tokens)}`);
             core.info(`Type: ${typeLabel}, Ranking: ${rankingLabel}, Classification: ${classificationLabel}`);
 
             // ── 5. Hidden marker used in every bot comment ────────────────────
