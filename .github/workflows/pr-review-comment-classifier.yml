@@ -113,8 +113,28 @@ jobs:
               looseTokens.push(lm[1].trim());
             }
 
-            // Any bracket token that is not one of the strict tokens is considered invalid-format input.
-            const invalidFormatTokens = looseTokens.filter(t => !tokens.includes(t));
+            // Canonical allowed label values
+            const ALL_LABELS = [...TYPES, ...RANKINGS, ...CLASSIFICATIONS];
+
+            // Normalize helper for comparison only
+            const norm = (s) =>
+              s
+                .toUpperCase()
+                .replace(/\s+/g, ' ')
+                .replace(/\s*\/\s*/g, '/')
+                .replace(/\s*-\s*/g, '-')
+                .trim();
+
+            // Labels that refer to known labels but are not in strict format
+            const strictSet = new Set(tokens);
+            const invalidFormatTokens = [];
+            for (const t of looseTokens) {
+              const matchesKnownLabel = ALL_LABELS.some(lbl => norm(lbl) === norm(t));
+              const isStrictlyValid = strictSet.has(t);
+              if (matchesKnownLabel && !isStrictlyValid) {
+                invalidFormatTokens.push(t);
+              }
+            }
 
             // Helper for safe markdown rendering in case token has special chars.
             const escapeMd = (s) => s.replace(/[`|]/g, '\\$&');
@@ -240,8 +260,19 @@ jobs:
 
             // ── 8. Determine validation case and act ─────────────────────────
             if (invalidFormatTokens.length > 0 && tokens.length === 0) {
-              core.info('Case 0: Invalid tag format only');
+              core.info('Case 0: Invalid label format only');
               await upsertBotReminder(INVALID_FORMAT_TABLE);
+              return;
+            }
+            
+            if (invalidFormatTokens.length > 0 && tokens.length > 0) {
+              core.info('Case 0b: Mixed valid + invalid label formats');
+              const body = [
+                INVALID_FORMAT_TABLE,
+                '',
+                statusTable(typeLabel, rankingLabel, classificationLabel),
+              ].join('\n');
+              await upsertBotReminder(body);
               return;
             }
             
