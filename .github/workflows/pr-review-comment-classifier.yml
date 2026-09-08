@@ -85,12 +85,11 @@ jobs:
               'EDITORIAL',
             ];
 
-            const strictTokenRe = /\*\*\[([^\]]+)\]\*\*/g;
+            const strictTokenRe = /(^|[\s(>])\*\*\[([^\]]+)\]\*\*(?=$|[\s).,!?;:])/gm;
             const tokens = [];
             let m;
             while ((m = strictTokenRe.exec(cleanBody)) !== null) {
-              // Keep exact case/spacing as typed by user
-              tokens.push(m[1].trim());
+              tokens.push(m[2].trim());
             }
 
             const hasLabel = (label) => tokens.includes(label);
@@ -126,15 +125,17 @@ jobs:
                 .trim();
 
             // Labels that refer to known labels but are not in strict format
-            const strictSet = new Set(tokens);
-            const invalidFormatTokens = [];
-            for (const t of looseTokens) {
-              const matchesKnownLabel = ALL_LABELS.some(lbl => norm(lbl) === norm(t));
-              const isStrictlyValid = strictSet.has(t);
-              if (matchesKnownLabel && !isStrictlyValid) {
-                invalidFormatTokens.push(t);
+              const canonicalByNorm = new Map(ALL_LABELS.map(l => [norm(l), l]));
+              const strictSet = new Set(tokens);
+              const invalidFormatTokens = [];
+
+              for (const t of looseTokens) {
+                const canonical = canonicalByNorm.get(norm(t));
+                if (!canonical) continue; // unknown label
+                if (!strictSet.has(canonical)) {
+                  invalidFormatTokens.push(t); // known label, wrong case/format
+                }
               }
-            }
 
             // Helper for safe markdown rendering in case token has special chars.
             const escapeMd = (s) => s.replace(/[`|]/g, '\\$&');
