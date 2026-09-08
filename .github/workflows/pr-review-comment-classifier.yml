@@ -62,87 +62,13 @@ jobs:
               return;
             }
 
-                        // ── 3. Format validation first (before any normalization) ──────────
-            // All labels must match canonical format from saved-replies.js
-            const VALID_CANONICAL_LABELS = [
-              // TYPE labels
-              '**[QUESTION]**',
-              '**[DEFECT]**',
-              // RANKING labels
-              '🔴 **[MAJOR]**',
-              '🟡 **[MINOR]**',
-              // CLASSIFICATION labels
-              '🔴 **[MISSING]**',
-              '🟡 **[EXTRA/SUPERFLUOUS]**',
-              '🟠 **[AMBIGUOUS]**',
-              '🟠 **[INCONSISTENT]**',
-              '🟢 **[IMPROVEMENT DESIRABLE]**',
-              '🟠 **[NOT CONFORMING TO STANDARDS]**',
-              '🔴 **[RISK-PRONE]**',
-              '🔴 **[FACTUALLY INCORRECT]**',
-              '🔴 **[NOT IMPLEMENTABLE]**',
-              '🔵 **[EDITORIAL]**',
-            ];
-
-            // Extract all potential labels from rawBody (before normalization)
-            // Matches: **[LABEL]** or EMOJI **[LABEL]**
-            const potentialLabelsInRaw = rawBody.match(/(?:\p{Emoji}\s)*\*\*\[[^\]]+\]\*\*/gu) || [];
-            
-            core.info(`Potential labels found in raw body: ${JSON.stringify(potentialLabelsInRaw)}`);
-
-            // Check if any found labels don't match canonical format
-            const invalidLabels = potentialLabelsInRaw.filter(label => 
-              !VALID_CANONICAL_LABELS.includes(label)
-            );
-
-            // If invalid format detected, post error and exit
-            if (invalidLabels.length > 0) {
-              core.info(`Format validation failed: ${JSON.stringify(invalidLabels)}`);
-              
-              const INVALID_FORMAT_TABLE = `\
-              ### ❌ Invalid Label Format
-              
-              Your comment contains labels that don't match the required format.
-              
-              **Required format:** Labels must be from the saved replies menu and use bold + square brackets.
-              
-              #### Invalid labels found:
-              ${invalidLabels.map(label => `- You wrote: \`${label}\``).join('\n')}
-              
-              #### Valid label formats (use these exact formats):
-              | Label | Format |
-              |---|---|
-              | QUESTION | \`**[QUESTION]**\` |
-              | DEFECT | \`**[DEFECT]**\` |
-              | MAJOR | \`🔴 **[MAJOR]**\` |
-              | MINOR | \`🟡 **[MINOR]**\` |
-              | MISSING | \`🔴 **[MISSING]**\` |
-              | EXTRA/SUPERFLUOUS | \`🟡 **[EXTRA/SUPERFLUOUS]**\` |
-              | AMBIGUOUS | \`🟠 **[AMBIGUOUS]**\` |
-              | INCONSISTENT | \`🟠 **[INCONSISTENT]**\` |
-              | IMPROVEMENT DESIRABLE | \`🟢 **[IMPROVEMENT DESIRABLE]**\` |
-              | NOT CONFORMING TO STANDARDS | \`🟠 **[NOT CONFORMING TO STANDARDS]**\` |
-              | RISK-PRONE | \`🔴 **[RISK-PRONE]**\` |
-              | FACTUALLY INCORRECT | \`🔴 **[FACTUALLY INCORRECT]**\` |
-              | NOT IMPLEMENTABLE | \`🔴 **[NOT IMPLEMENTABLE]**\` |
-              | EDITORIAL | \`🔵 **[EDITORIAL]**\` |
-              
-              Please edit your comment using the saved replies menu or copy the exact format from above.`;
-              
-              await upsertBotReminder(INVALID_FORMAT_TABLE);
-              return;
-            }
-
-            // Format validation passed
-            core.info('Format validation passed: all labels match canonical format');
-
-            // ── 4. Normalize Markdown saved-reply bold labels ─────────────────
+            // ── 3. Normalize Markdown saved-reply bold labels ─────────────────
             //      **[LABEL]**  →  [LABEL]
             const normalized = rawBody.replace(/\*\*\[([^\]]+)\]\*\*/g, '[$1]');
             const withoutCodeBlocks = normalized.replace(/```[\s\S]*?```/g, '');
             const cleanBody = withoutCodeBlocks.replace(/`[^`]*`/g, '');
 
-            // ── 5. Extract labels ─────────────────────────────────────────────
+            // ── 4. Extract labels ─────────────────────────────────────────────
             const TYPES           = ['QUESTION', 'DEFECT'];
             const RANKINGS        = ['MAJOR', 'MINOR'];
             const CLASSIFICATIONS = [
@@ -178,10 +104,10 @@ jobs:
             core.info(`Tokens found: ${JSON.stringify(tokens)}`);
             core.info(`Type: ${typeLabel}, Ranking: ${rankingLabel}, Classification: ${classificationLabel}`);
 
-            // ── 6. Hidden marker used in every bot comment ────────────────────
+            // ── 5. Hidden marker used in every bot comment ────────────────────
             const MARKER = `<!-- review-classifier:${commentId} -->`;
 
-            // ── 7. Helpers ────────────────────────────────────────────────────
+            // ── 6. Helpers ────────────────────────────────────────────────────
             async function findBotReminder() {
               const allComments = await github.paginate(
                 github.rest.pulls.listReviewComments,
@@ -230,7 +156,7 @@ jobs:
               }
             }
 
-            // ── 8. Build reminder body ────────────────────────────────────────
+            // ── 7. Build reminder body ────────────────────────────────────────
             const TYPE_TABLE = `\
             ### ⚠️ Missing: **Type**
 
@@ -275,7 +201,7 @@ jobs:
             | Classification | ${check(classification)} |`;
             }
 
-            // ── 9. Determine validation case and act ─────────────────────────
+            // ── 8. Determine validation case and act ─────────────────────────
             if (!typeLabel && !rankingLabel && !classificationLabel) {
               core.info('Case 1: No labels');
               await upsertBotReminder(TYPE_TABLE);
@@ -333,4 +259,3 @@ jobs:
 
             core.info('Fallback: unrecognised label combination');
             await upsertBotReminder(TYPE_TABLE);
-            
