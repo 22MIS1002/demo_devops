@@ -105,6 +105,41 @@ jobs:
 
             core.info(`Strict tokens found: ${JSON.stringify(tokens)}`);
             core.info(`Type: ${typeLabel}, Ranking: ${rankingLabel}, Classification: ${classificationLabel}`);
+            // Detect bracket labels typed in non-strict format (e.g. [DEFECT], **[defect]**, [minor], etc.)
+            const looseTokenRe = /\[([^\]]+)\]/g;
+            const looseTokens = [];
+            let lm;
+            while ((lm = looseTokenRe.exec(cleanBody)) !== null) {
+              looseTokens.push(lm[1].trim());
+            }
+
+            // Any bracket token that is not one of the strict tokens is considered invalid-format input.
+            const invalidFormatTokens = looseTokens.filter(t => !tokens.includes(t));
+
+            // Helper for safe markdown rendering in case token has special chars.
+            const escapeMd = (s) => s.replace(/[`|]/g, '\\$&');
+
+            const INVALID_FORMAT_TABLE = `\
+            ### ⚠️ Invalid label format detected
+
+            We found label(s), but they are not in the required saved-reply format.
+
+            Use **exactly**:
+            - Bold + brackets: \`**[LABEL]**\`
+            - Exact uppercase text (for example: \`**[DEFECT]**\`, \`**[MAJOR]**\`)
+
+            ${
+              invalidFormatTokens.length
+                ? `**Invalid label(s) found:** ${invalidFormatTokens.map(t => `\`[${escapeMd(t)}]\``).join(', ')}`
+                : ''
+            }
+
+            **Examples**
+            - ✅ \`**[QUESTION]**\`
+            - ✅ \`**[DEFECT]**\` + ✅ \`**[MAJOR]**\` + ✅ \`**[MISSING]**\`
+            - ❌ \`[DEFECT]\` (not bold)
+            - ❌ \`**[defect]**\` (wrong case)
+            `;
 
             // ── 5. Hidden marker used in every bot comment ────────────────────
             const MARKER = `<!-- review-classifier:${commentId} -->`;
@@ -204,6 +239,12 @@ jobs:
             }
 
             // ── 8. Determine validation case and act ─────────────────────────
+            if (invalidFormatTokens.length > 0 && tokens.length === 0) {
+              core.info('Case 0: Invalid tag format only');
+              await upsertBotReminder(INVALID_FORMAT_TABLE);
+              return;
+            }
+            
             if (!typeLabel && !rankingLabel && !classificationLabel) {
               core.info('Case 1: No labels');
               await upsertBotReminder(TYPE_TABLE);
