@@ -156,8 +156,8 @@ jobs:
                     '---',
                     '### ❌ Invalid labels found',
                     '',
-                    '| Entered label | Why invalid | Correct format |',
-                    '|---|---|---|',
+                    '| Entered label | Why invalid |',
+                    '|---|---|',
                     ...invalidFormatTokens.map(t => `| \`[${escapeMd(t)}]\` | Not strict saved-reply format | \`**[${escapeMd(t).toUpperCase()}]**\` |`)
                   ].join('\n')
                 : ''
