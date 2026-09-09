@@ -151,9 +151,19 @@ jobs:
 
             ${
               invalidFormatTokens.length
-                ? `\n**Invalid label(s) found (wrong format only):** ${invalidFormatTokens.map(t => `\`[${escapeMd(t)}]\``).join(', ')}\n`
+                ? [
+                    '',
+                    '---',
+                    '### ❌ Invalid labels found',
+                    '',
+                    '| Entered label | Why invalid | Correct format |',
+                    '|---|---|---|',
+                    ...invalidFormatTokens.map(t => `| \`[${escapeMd(t)}]\` | Not strict saved-reply format | \`**[${escapeMd(t).toUpperCase()}]**\` |`)
+                  ].join('\n')
                 : ''
             }
+            
+            ---
 
             **Examples**
             - ✅ \`**[QUESTION]**\`
