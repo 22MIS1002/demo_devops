@@ -151,7 +151,7 @@ jobs:
 
             ${
               invalidFormatTokens.length
-                ? `**Invalid label(s) found:** ${invalidFormatTokens.map(t => `\`[${escapeMd(t)}]\``).join(', ')}`
+                ? `\n**Invalid label(s) found (wrong format only):** ${invalidFormatTokens.map(t => `\`[${escapeMd(t)}]\``).join(', ')}\n`
                 : ''
             }
 
@@ -160,6 +160,7 @@ jobs:
             - ✅ \`**[DEFECT]**\` + ✅ \`**[MAJOR]**\` + ✅ \`**[MISSING]**\`
             - ❌ \`[DEFECT]\` (not bold)
             - ❌ \`**[defect]**\` (wrong case)
+            - ❌ \`**[ DEFECT ]**\` (spaces inside brackets)
             `.replace(/^\s+/gm, '').trim();
 
             // ── 5. Hidden marker used in every bot comment ────────────────────
