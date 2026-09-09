@@ -89,7 +89,7 @@ jobs:
             const tokens = [];
             let m;
             while ((m = strictTokenRe.exec(cleanBody)) !== null) {
-              tokens.push(m[2].trim());
+              tokens.push(m[2]);
             }
 
             const hasLabel = (label) => tokens.includes(label);
@@ -160,7 +160,7 @@ jobs:
             - ✅ \`**[DEFECT]**\` + ✅ \`**[MAJOR]**\` + ✅ \`**[MISSING]**\`
             - ❌ \`[DEFECT]\` (not bold)
             - ❌ \`**[defect]**\` (wrong case)
-            `;
+            `.replace(/^\s+/gm, '').trim();
 
             // ── 5. Hidden marker used in every bot comment ────────────────────
             const MARKER = `<!-- review-classifier:${commentId} -->`;
